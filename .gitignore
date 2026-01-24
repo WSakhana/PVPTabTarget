@@ -1,0 +1,7 @@
+# Fichiers de sauvegarde
+*.bak
+*.tmp
+
+# Fichiers système
+.DS_Store
+Thumbs.db
