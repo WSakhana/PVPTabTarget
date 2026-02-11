@@ -1,12 +1,18 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/..\FrameXML\UI.xsd">
 
-	<Script file="PVPTabTarget.lua"/>
+	<!-- Localization (loaded before main addon) -->
+	<Script file="Locale\enUS.lua"/>
+	<Script file="Locale\frFR.lua"/>
+	<Script file="Locale\deDE.lua"/>
+	<Script file="Locale\esES.lua"/>
+	<Script file="Locale\ptBR.lua"/>
+	<Script file="Locale\ruRU.lua"/>
+	<Script file="Locale\koKR.lua"/>
+	<Script file="Locale\zhCN.lua"/>
+	<Script file="Locale\zhTW.lua"/>
+	<Script file="Locale\itIT.lua"/>
 
-	<Frame name="PVPTabTargetFrame">
-		<Scripts>
-			<OnLoad>PVPTabTarget:OnLoad(self)</OnLoad>
-			<OnEvent>PVPTabTarget:OnEvent(self, event, ...)</OnEvent>
-		</Scripts>
-	</Frame>
+	<!-- Main Addon (AceAddon handles initialization) -->
+	<Script file="PVPTabTarget.lua"/>
 
 </Ui>

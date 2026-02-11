@@ -1,10 +1,26 @@
-local AddonName, Addon = ...
-PVPTabTarget = Addon
+-- ============================================================================
+-- PVPTabTarget — Smart TAB Targeting for WoW
+-- Refactored with AceAddon-3.0, AceDB-3.0, AceEvent-3.0, AceConsole-3.0,
+-- AceTimer-3.0, AceLocale-3.0 & AceDBOptions-3.0
+-- ============================================================================
+
+local AddonName, ns = ...
+
+-- Locale
+local L = LibStub("AceLocale-3.0"):GetLocale("PVPTabTarget")
+
+-- Create addon with Ace mixins
+local PVPTabTarget = LibStub("AceAddon-3.0"):NewAddon("PVPTabTarget",
+	"AceConsole-3.0",
+	"AceEvent-3.0",
+	"AceTimer-3.0"
+)
+ns.Addon = PVPTabTarget
 
 -- ============================================================================
--- LOCALIZED GLOBALS (Performance optimization)
+-- LOCALIZED WOW API (Performance)
 -- ============================================================================
-local issecretvalue = issecretvalue
+local issecurevariable = issecurevariable
 local InCombatLockdown = InCombatLockdown
 local IsInInstance = IsInInstance
 local GetCurrentBindingSet = GetCurrentBindingSet
@@ -13,7 +29,6 @@ local GetBindingKey = GetBindingKey
 local GetBindingAction = GetBindingAction
 local SetBinding = SetBinding
 local SaveBindings = SaveBindings
-local print = print
 local pairs = pairs
 
 -- ============================================================================
@@ -31,25 +46,25 @@ local ZONE_WORLD = "WORLD"
 
 -- UI Color Codes
 local COLORS = {
-	ADDON = "|cFF74D06C",      -- Green (addon name)
-	SUCCESS = "|cFF74D06C",    -- Green (success/enabled)
-	WARNING = "|cFFFFD700",    -- Yellow (warnings/temp)
-	DANGER = "|cFFFF6B6B",     -- Red (PVP/disabled)
-	INFO = "|cFF69B4FF",       -- Light blue (info)
-	MUTED = "|cFF888888",      -- Gray (muted text)
-	WHITE = "|cFFFFFFFF",      -- White (normal text)
+	ADDON   = "|cFF74D06C",
+	SUCCESS = "|cFF74D06C",
+	WARNING = "|cFFFFD700",
+	DANGER  = "|cFFFF6B6B",
+	INFO    = "|cFF69B4FF",
+	MUTED   = "|cFF888888",
+	WHITE   = "|cFFFFFFFF",
 }
 
--- Friendly Display Names
+-- Friendly Display Names (using locale)
 local ZONE_NAMES = {
-	[ZONE_PVP] = "PvP Zone",
-	[ZONE_PVE] = "PvE Instance",
-	[ZONE_WORLD] = "Open World",
+	[ZONE_PVP]   = function() return L["zone_pvp"] end,
+	[ZONE_PVE]   = function() return L["zone_pve"] end,
+	[ZONE_WORLD] = function() return L["zone_world"] end,
 }
 
 local MODE_NAMES = {
-	[MODE_PLAYERS_ONLY] = "Players Only",
-	[MODE_ALL_ENEMIES] = "All Enemies",
+	[MODE_PLAYERS_ONLY] = function() return L["mode_players_only"] end,
+	[MODE_ALL_ENEMIES]  = function() return L["mode_all_enemies"] end,
 }
 
 -- Icon Choices for Players Only mode (PvP themed)
@@ -63,17 +78,6 @@ local PLAYERS_ONLY_ICONS = {
 	["pvp_7"] = "Interface\\Icons\\INV_Misc_Head_Human_01",
 }
 
-local PLAYERS_ONLY_ICON_NAMES = {
-	["pvp_1"] = "Icon 1",
-	["pvp_2"] = "Icon 2",
-	["pvp_3"] = "Icon 3",
-	["pvp_4"] = "Icon 4",
-	["pvp_5"] = "Icon 5",
-	["pvp_6"] = "Icon 6",
-	["pvp_7"] = "Icon 7",
-}
-
--- Icon Choices for All Enemies mode (PvE/Monster themed)
 local ALL_ENEMIES_ICONS = {
 	["pve_1"] = "Interface\\Icons\\INV_Misc_Head_Dragon_01",
 	["pve_2"] = "Interface\\Icons\\INV_Misc_Head_Dragon_Black",
@@ -82,158 +86,100 @@ local ALL_ENEMIES_ICONS = {
 	["pve_5"] = "Interface\\Icons\\Achievement_PVP_A_01",
 }
 
-local ALL_ENEMIES_ICON_NAMES = {
-	["pve_1"] = "Icon 1",
-	["pve_2"] = "Icon 2",
-	["pve_3"] = "Icon 3",
-	["pve_4"] = "Icon 4",
-	["pve_5"] = "Icon 5",
-}
+-- ============================================================================
+-- ICON HELPERS
+-- ============================================================================
 
--- Helper to get icon values for Players Only dropdown
 local function GetPlayersOnlyIconValues()
 	local values = {}
 	for key, path in pairs(PLAYERS_ONLY_ICONS) do
-		values[key] = "|T" .. path .. ":16:16|t " .. PLAYERS_ONLY_ICON_NAMES[key]
+		values[key] = "|T" .. path .. ":16:16|t Icon " .. key:match("%d+")
 	end
 	return values
 end
 
--- Helper to get icon values for All Enemies dropdown
 local function GetAllEnemiesIconValues()
 	local values = {}
 	for key, path in pairs(ALL_ENEMIES_ICONS) do
-		values[key] = "|T" .. path .. ":16:16|t " .. ALL_ENEMIES_ICON_NAMES[key]
+		values[key] = "|T" .. path .. ":16:16|t Icon " .. key:match("%d+")
 	end
 	return values
 end
 
--- Helper to get the current icon path for a mode
 local function GetModeIcon(mode)
 	if mode == MODE_PLAYERS_ONLY then
-		local iconKey = Addon.Settings and Addon.Settings.PlayersOnlyIcon or "pvp_1"
+		local iconKey = PVPTabTarget.db and PVPTabTarget.db.profile.PlayersOnlyIcon or "pvp_1"
 		return PLAYERS_ONLY_ICONS[iconKey] or PLAYERS_ONLY_ICONS["pvp_1"]
 	else
-		local iconKey = Addon.Settings and Addon.Settings.AllEnemiesIcon or "pve_1"
+		local iconKey = PVPTabTarget.db and PVPTabTarget.db.profile.AllEnemiesIcon or "pve_1"
 		return ALL_ENEMIES_ICONS[iconKey] or ALL_ENEMIES_ICONS["pve_1"]
 	end
 end
 
 -- ============================================================================
--- DEFAULT CONFIGURATION
+-- ACEDB DEFAULTS
 -- ============================================================================
-Addon.DefaultConfig = {
-	-- Behavior
-	UseDefaultKeys = true,
-	SilentMode = false,
-	ShowMinimap = true,
-	
-	-- Targeting modes per zone
-	PVPMode = MODE_PLAYERS_ONLY,
-	PVEMode = MODE_ALL_ENEMIES,
-	WorldMode = MODE_ALL_ENEMIES,
-	
-	-- Icons for each mode
-	PlayersOnlyIcon = "pvp_1",
-	AllEnemiesIcon = "pve_1",
-	
-	-- Custom keybinds
-	TargetKey = "TAB",
-	PreviousTargetKey = "SHIFT-TAB",
-	
-	-- Minimap position
-	minimapPos = 225,
+local defaults = {
+	profile = {
+		-- Behavior
+		UseDefaultKeys = true,
+		SilentMode = false,
+		ShowMinimap = true,
+
+		-- Targeting modes per zone
+		PVPMode = MODE_PLAYERS_ONLY,
+		PVEMode = MODE_ALL_ENEMIES,
+		WorldMode = MODE_ALL_ENEMIES,
+
+		-- Icons for each mode
+		PlayersOnlyIcon = "pvp_1",
+		AllEnemiesIcon = "pve_1",
+
+		-- Custom keybinds
+		TargetKey = "TAB",
+		PreviousTargetKey = "SHIFT-TAB",
+
+		-- LibDBIcon minimap position (nested table expected by LibDBIcon)
+		minimap = {
+			hide = false,
+			minimapPos = 225,
+		},
+	},
 }
 
 -- ============================================================================
--- ADDON STATE
+-- ADDON STATE (non-persistent)
 -- ============================================================================
-Addon.BindingFailed = false
-Addon.CurrentZoneType = ZONE_WORLD
-Addon.CurrentTargetMode = MODE_ALL_ENEMIES
-Addon.TemporaryOverride = false
-Addon.TemporaryMode = nil
-Addon.OptionsCategory = nil
-Addon.IsInitialized = false
+PVPTabTarget.BindingFailed = false
+PVPTabTarget.CurrentZoneType = ZONE_WORLD
+PVPTabTarget.CurrentTargetMode = MODE_ALL_ENEMIES
+PVPTabTarget.TemporaryOverride = false
+PVPTabTarget.TemporaryMode = nil
 
 -- ============================================================================
--- UTILITY FUNCTIONS
+-- DISPLAY HELPERS
 -- ============================================================================
 
--- Print formatted addon message
-local function PrintMessage(message, isError)
-	if Addon.Settings and Addon.Settings.SilentMode and not isError then
-		return
-	end
-	local prefix = COLORS.ADDON .. "[PVPTabTarget]|r "
-	print(prefix .. message)
-end
-
--- Print error message (always shown regardless of SilentMode)
-local function PrintError(message)
-	PrintMessage(COLORS.DANGER .. message .. "|r", true)
-end
-
--- Get the current zone type based on instance and PvP info
-local function GetZoneTypeString()
-	local pvpType = GetZonePVPInfo()
-	local _, instanceType = IsInInstance()
-	
-	-- PvP zones: arenas, battlegrounds, war mode combat
-	if instanceType == "arena" or instanceType == "pvp" or pvpType == "combat" then
-		return ZONE_PVP
-	end
-	
-	-- PvE instances: dungeons, raids, scenarios
-	if instanceType == "party" or instanceType == "raid" or instanceType == "scenario" then
-		return ZONE_PVE
-	end
-	
-	-- Everything else is open world
-	return ZONE_WORLD
-end
-
--- Get the targeting mode for a given zone type
-local function GetModeForZone(zoneType)
-	-- Temporary override takes priority
-	if Addon.TemporaryOverride and Addon.TemporaryMode then
-		return Addon.TemporaryMode
-	end
-	
-	local settings = Addon.Settings
-	if not settings then
-		return MODE_ALL_ENEMIES
-	end
-	
-	if zoneType == ZONE_PVP then
-		return settings.PVPMode or MODE_PLAYERS_ONLY
-	elseif zoneType == ZONE_PVE then
-		return settings.PVEMode or MODE_ALL_ENEMIES
-	else
-		return settings.WorldMode or MODE_ALL_ENEMIES
-	end
-end
-
--- Format mode for display with color and icon
 local function FormatMode(mode, includeIcon)
 	local icon = includeIcon and ("|T" .. GetModeIcon(mode) .. ":14:14|t ") or ""
+	local name = MODE_NAMES[mode] and MODE_NAMES[mode]() or mode
 	if mode == MODE_PLAYERS_ONLY then
-		return icon .. COLORS.DANGER .. MODE_NAMES[mode] .. "|r"
+		return icon .. COLORS.DANGER .. name .. "|r"
 	end
-	return icon .. COLORS.SUCCESS .. MODE_NAMES[mode] .. "|r"
+	return icon .. COLORS.SUCCESS .. name .. "|r"
 end
 
--- Get mode values for dropdown with dynamic icons
 local function GetModeDropdownValues()
 	return {
-		[MODE_PLAYERS_ONLY] = "|T" .. GetModeIcon(MODE_PLAYERS_ONLY) .. ":14:14|t |cFFFF6B6BPlayers Only|r",
-		[MODE_ALL_ENEMIES] = "|T" .. GetModeIcon(MODE_ALL_ENEMIES) .. ":14:14|t |cFF74D06CAll Enemies|r",
+		[MODE_PLAYERS_ONLY] = "|T" .. GetModeIcon(MODE_PLAYERS_ONLY) .. ":14:14|t " ..
+			COLORS.DANGER .. L["mode_players_only"] .. "|r",
+		[MODE_ALL_ENEMIES] = "|T" .. GetModeIcon(MODE_ALL_ENEMIES) .. ":14:14|t " ..
+			COLORS.SUCCESS .. L["mode_all_enemies"] .. "|r",
 	}
 end
 
--- Format zone type for display with color
 local function FormatZone(zoneType)
-	local zoneName = ZONE_NAMES[zoneType] or zoneType
+	local zoneName = ZONE_NAMES[zoneType] and ZONE_NAMES[zoneType]() or zoneType
 	if zoneType == ZONE_PVP then
 		return COLORS.DANGER .. zoneName .. "|r"
 	elseif zoneType == ZONE_PVE then
@@ -242,31 +188,50 @@ local function FormatZone(zoneType)
 	return COLORS.SUCCESS .. zoneName .. "|r"
 end
 
--- Get formatted status text for tooltips/display
 local function GetStatusText()
-	local zoneText = FormatZone(Addon.CurrentZoneType)
-	local modeText = FormatMode(Addon.CurrentTargetMode, true)
-	
-	local status = "Current Zone: " .. zoneText
-	if Addon.TemporaryOverride then
-		status = status .. COLORS.WARNING .. " [Temporary Override]" .. "|r"
+	local zoneText = FormatZone(PVPTabTarget.CurrentZoneType)
+	local modeText = FormatMode(PVPTabTarget.CurrentTargetMode, true)
+
+	local status = L["current_zone"] .. ": " .. zoneText
+	if PVPTabTarget.TemporaryOverride then
+		status = status .. " " .. COLORS.WARNING .. "[" .. L["temporary_override"] .. "]|r"
 	end
-	status = status .. "\nTargeting: " .. modeText
-	
+	status = status .. "\n" .. L["targeting"] .. ": " .. modeText
+
 	return status
 end
 
--- Open the addon settings panel
-local function OpenSettings()
-	if InCombatLockdown() then
-		PrintError("Cannot open settings during combat!")
-		return
+-- ============================================================================
+-- ZONE DETECTION
+-- ============================================================================
+
+local function GetZoneTypeString()
+	local pvpType = GetZonePVPInfo()
+	local _, instanceType = IsInInstance()
+
+	if instanceType == "arena" or instanceType == "pvp" or pvpType == "combat" then
+		return ZONE_PVP
 	end
-	
-	if Addon.OptionsCategory and Addon.OptionsCategory.name then
-		Settings.OpenToCategory(Addon.OptionsCategory.name)
+
+	if instanceType == "party" or instanceType == "raid" or instanceType == "scenario" then
+		return ZONE_PVE
+	end
+
+	return ZONE_WORLD
+end
+
+local function GetModeForZone(zoneType)
+	if PVPTabTarget.TemporaryOverride and PVPTabTarget.TemporaryMode then
+		return PVPTabTarget.TemporaryMode
+	end
+
+	local p = PVPTabTarget.db.profile
+	if zoneType == ZONE_PVP then
+		return p.PVPMode or MODE_PLAYERS_ONLY
+	elseif zoneType == ZONE_PVE then
+		return p.PVEMode or MODE_ALL_ENEMIES
 	else
-		PrintError("Settings panel not available.")
+		return p.WorldMode or MODE_ALL_ENEMIES
 	end
 end
 
@@ -277,14 +242,12 @@ end
 local function UpdateMinimapIcon()
 	local LDB = LibStub("LibDataBroker-1.1", true)
 	if not LDB then return end
-	
+
 	local dataObj = LDB:GetDataObjectByName("PVPTabTarget")
 	if not dataObj then return end
-	
-	-- Update icon based on current mode using configured icons
-	dataObj.icon = GetModeIcon(Addon.CurrentTargetMode)
-	
-	-- Force icon texture update
+
+	dataObj.icon = GetModeIcon(PVPTabTarget.CurrentTargetMode)
+
 	local iconLib = LibStub("LibDBIcon-1.0", true)
 	if iconLib then
 		local button = iconLib:GetMinimapButton("PVPTabTarget")
@@ -295,414 +258,429 @@ local function UpdateMinimapIcon()
 end
 
 local function ToggleTargetMode()
-	-- Toggle between modes
 	local newMode
-	if Addon.TemporaryOverride then
-		-- Already in temp mode, toggle it
-		newMode = (Addon.TemporaryMode == MODE_PLAYERS_ONLY) and MODE_ALL_ENEMIES or MODE_PLAYERS_ONLY
+	if PVPTabTarget.TemporaryOverride then
+		newMode = (PVPTabTarget.TemporaryMode == MODE_PLAYERS_ONLY)
+			and MODE_ALL_ENEMIES or MODE_PLAYERS_ONLY
 	else
-		-- Enable temp override with opposite of current mode
-		Addon.TemporaryOverride = true
-		newMode = (Addon.CurrentTargetMode == MODE_PLAYERS_ONLY) and MODE_ALL_ENEMIES or MODE_PLAYERS_ONLY
+		PVPTabTarget.TemporaryOverride = true
+		newMode = (PVPTabTarget.CurrentTargetMode == MODE_PLAYERS_ONLY)
+			and MODE_ALL_ENEMIES or MODE_PLAYERS_ONLY
 	end
-	
-	Addon.TemporaryMode = newMode
-	Addon:ApplyBindings(true)
+
+	PVPTabTarget.TemporaryMode = newMode
+	PVPTabTarget:ApplyBindings(true)
 end
 
-local function SetupMinimapButton()
+function PVPTabTarget:SetupMinimapButton()
 	local LDB = LibStub("LibDataBroker-1.1", true)
 	local iconLib = LibStub("LibDBIcon-1.0", true)
-	
-	if not LDB or not iconLib then
-		return
-	end
-	
+
+	if not LDB or not iconLib then return end
+
 	local dataObj = LDB:NewDataObject("PVPTabTarget", {
 		type = "launcher",
 		text = "PVPTabTarget",
-		icon = GetModeIcon(Addon.CurrentTargetMode or MODE_ALL_ENEMIES),
-		
+		icon = GetModeIcon(self.CurrentTargetMode or MODE_ALL_ENEMIES),
+
 		OnClick = function(_, button)
 			if button == "LeftButton" then
 				ToggleTargetMode()
 			elseif button == "RightButton" then
-				OpenSettings()
+				self:OpenSettings()
 			end
 		end,
-		
+
 		OnTooltipShow = function(tooltip)
 			tooltip:AddLine(COLORS.ADDON .. "PVPTabTarget|r")
 			tooltip:AddLine(" ")
-			
-			-- Status
 			tooltip:AddLine(GetStatusText())
 			tooltip:AddLine(" ")
-			
-			-- Current keybinds
-			local targetKey = Addon.Settings.TargetKey or "TAB"
-			local prevKey = Addon.Settings.PreviousTargetKey or "SHIFT-TAB"
-			tooltip:AddDoubleLine("Next Target:", targetKey, 1, 1, 1, 0.7, 0.9, 1)
-			tooltip:AddDoubleLine("Previous Target:", prevKey, 1, 1, 1, 0.7, 0.9, 1)
+
+			local p = self.db.profile
+			tooltip:AddDoubleLine(
+				L["tooltip_next_target"], p.TargetKey or "TAB",
+				1, 1, 1, 0.7, 0.9, 1
+			)
+			tooltip:AddDoubleLine(
+				L["tooltip_prev_target"], p.PreviousTargetKey or "SHIFT-TAB",
+				1, 1, 1, 0.7, 0.9, 1
+			)
 			tooltip:AddLine(" ")
-			
-			-- Instructions
-			tooltip:AddLine(COLORS.INFO .. "Left-Click|r - Quick toggle mode")
-			tooltip:AddLine(COLORS.INFO .. "Right-Click|r - Open settings")
-			
-			if Addon.TemporaryOverride then
+			tooltip:AddLine(COLORS.INFO .. L["minimap_left_click"] .. "|r — " .. L["minimap_toggle_mode"])
+			tooltip:AddLine(COLORS.INFO .. L["minimap_right_click"] .. "|r — " .. L["minimap_open_settings"])
+
+			if self.TemporaryOverride then
 				tooltip:AddLine(" ")
-				tooltip:AddLine(COLORS.MUTED .. "Override resets on zone change")
+				tooltip:AddLine(COLORS.MUTED .. L["override_resets"] .. "|r")
 			end
 		end,
 	})
-	
-	iconLib:Register("PVPTabTarget", dataObj, {
-		hide = not Addon.Settings.ShowMinimap,
-		minimapPos = Addon.Settings.minimapPos or 225,
-		radius = 80,
-	})
+
+	iconLib:Register("PVPTabTarget", dataObj, self.db.profile.minimap)
 end
 
 -- ============================================================================
--- ACE CONFIG GUI (Settings Panel)
+-- SETTINGS PANEL
 -- ============================================================================
 
-Addon.AceConfig = {
-	type = "group",
-	name = COLORS.ADDON .. "PVPTabTarget|r",
-	args = {
-		-- ================================================================
-		-- STATUS SECTION
-		-- ================================================================
-		statusHeader = {
-			type = "header",
-			name = "Current Status",
-			order = 1,
+function PVPTabTarget:OpenSettings()
+	if InCombatLockdown() then
+		self:Print(COLORS.DANGER .. L["msg_combat_error"] .. "|r")
+		return
+	end
+
+	if self.optionsCategory and self.optionsCategory.name then
+		Settings.OpenToCategory(self.optionsCategory.name)
+	else
+		self:Print(COLORS.DANGER .. L["msg_settings_unavailable"] .. "|r")
+	end
+end
+
+-- ============================================================================
+-- ACE OPTIONS TABLE — Tabbed Layout
+-- ============================================================================
+
+function PVPTabTarget:GetOptionsTable()
+	local options = {
+		type = "group",
+		name = COLORS.ADDON .. "PVPTabTarget|r",
+		childGroups = "tab",
+		args = {
+			-- ============================================================
+			-- STATUS (always visible at top, before tabs)
+			-- ============================================================
+			statusHeader = {
+				type = "header",
+				name = "",
+				order = 1,
+			},
+			statusDisplay = {
+				type = "description",
+				name = function()
+					return "\n" .. GetStatusText() .. "\n"
+				end,
+				fontSize = "medium",
+				order = 2,
+			},
+
+			-- ============================================================
+			-- TAB 1: TARGETING
+			-- ============================================================
+			targeting = {
+				type = "group",
+				name = L["tab_targeting"],
+				order = 10,
+				args = {
+					modeDescription = {
+						type = "description",
+						name = L["targeting_desc"] .. "\n\n" ..
+							COLORS.DANGER .. L["mode_players_only"] .. "|r — " .. L["mode_players_desc"] .. "\n" ..
+							COLORS.SUCCESS .. L["mode_all_enemies"] .. "|r — " .. L["mode_all_desc"] .. "\n",
+						fontSize = "medium",
+						order = 1,
+					},
+
+					spacer1 = { type = "description", name = " ", order = 9 },
+
+					PVPMode = {
+						type = "select",
+						name = COLORS.DANGER .. L["pvp_zones_label"] .. "|r",
+						desc = L["pvp_zones_desc"],
+						values = function() return GetModeDropdownValues() end,
+						width = "full",
+						order = 10,
+						set = function(_, val)
+							self.db.profile.PVPMode = val
+							self:ApplyBindings()
+						end,
+						get = function() return self.db.profile.PVPMode end,
+					},
+
+					PVEMode = {
+						type = "select",
+						name = COLORS.WARNING .. L["pve_zones_label"] .. "|r",
+						desc = L["pve_zones_desc"],
+						values = function() return GetModeDropdownValues() end,
+						width = "full",
+						order = 11,
+						set = function(_, val)
+							self.db.profile.PVEMode = val
+							self:ApplyBindings()
+						end,
+						get = function() return self.db.profile.PVEMode end,
+					},
+
+					WorldMode = {
+						type = "select",
+						name = COLORS.SUCCESS .. L["world_zones_label"] .. "|r",
+						desc = L["world_zones_desc"],
+						values = function() return GetModeDropdownValues() end,
+						width = "full",
+						order = 12,
+						set = function(_, val)
+							self.db.profile.WorldMode = val
+							self:ApplyBindings()
+						end,
+						get = function() return self.db.profile.WorldMode end,
+					},
+				},
+			},
+
+			-- ============================================================
+			-- TAB 2: KEYBINDS
+			-- ============================================================
+			keybinds = {
+				type = "group",
+				name = L["tab_keybinds"],
+				order = 20,
+				args = {
+					keybindDescription = {
+						type = "description",
+						name = L["keybind_desc"] .. "\n",
+						fontSize = "medium",
+						order = 1,
+					},
+
+					TargetKey = {
+						type = "keybinding",
+						name = L["next_enemy"],
+						desc = L["next_enemy_desc"],
+						width = "full",
+						order = 10,
+						set = function(_, val)
+							self.db.profile.TargetKey = (val ~= "") and val or nil
+							self:ApplyBindings()
+						end,
+						get = function() return self.db.profile.TargetKey end,
+					},
+
+					PreviousTargetKey = {
+						type = "keybinding",
+						name = L["prev_enemy"],
+						desc = L["prev_enemy_desc"],
+						width = "full",
+						order = 11,
+						set = function(_, val)
+							self.db.profile.PreviousTargetKey = (val ~= "") and val or nil
+							self:ApplyBindings()
+						end,
+						get = function() return self.db.profile.PreviousTargetKey end,
+					},
+
+					spacer1 = { type = "description", name = " ", order = 19 },
+
+					UseDefaultKeys = {
+						type = "toggle",
+						name = L["use_default_keys"],
+						desc = L["use_default_keys_desc"],
+						width = "full",
+						order = 20,
+						set = function(_, val)
+							self.db.profile.UseDefaultKeys = val
+							self:ApplyBindings()
+						end,
+						get = function() return self.db.profile.UseDefaultKeys end,
+					},
+				},
+			},
+
+			-- ============================================================
+			-- TAB 3: APPEARANCE
+			-- ============================================================
+			appearance = {
+				type = "group",
+				name = L["tab_appearance"],
+				order = 30,
+				args = {
+					-- Icons section
+					iconHeader = {
+						type = "header",
+						name = L["header_icons"],
+						order = 1,
+					},
+					iconDescription = {
+						type = "description",
+						name = L["icon_desc"] .. "\n",
+						fontSize = "medium",
+						order = 2,
+					},
+
+					PlayersOnlyIcon = {
+						type = "select",
+						name = COLORS.DANGER .. L["players_icon_label"] .. "|r",
+						desc = L["players_icon_desc"],
+						values = function() return GetPlayersOnlyIconValues() end,
+						width = "full",
+						order = 10,
+						set = function(_, val)
+							self.db.profile.PlayersOnlyIcon = val
+							UpdateMinimapIcon()
+							LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
+						end,
+						get = function() return self.db.profile.PlayersOnlyIcon end,
+					},
+
+					AllEnemiesIcon = {
+						type = "select",
+						name = COLORS.SUCCESS .. L["all_icon_label"] .. "|r",
+						desc = L["all_icon_desc"],
+						values = function() return GetAllEnemiesIconValues() end,
+						width = "full",
+						order = 11,
+						set = function(_, val)
+							self.db.profile.AllEnemiesIcon = val
+							UpdateMinimapIcon()
+							LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
+						end,
+						get = function() return self.db.profile.AllEnemiesIcon end,
+					},
+
+					-- Display section
+					displayHeader = {
+						type = "header",
+						name = L["header_display"],
+						order = 20,
+					},
+
+					ShowMinimap = {
+						type = "toggle",
+						name = L["show_minimap"],
+						desc = L["show_minimap_desc"],
+						width = "full",
+						order = 21,
+						set = function(_, val)
+							self.db.profile.ShowMinimap = val
+							self.db.profile.minimap.hide = not val
+							local iconLib = LibStub("LibDBIcon-1.0", true)
+							if iconLib then
+								if val then
+									iconLib:Show("PVPTabTarget")
+								else
+									iconLib:Hide("PVPTabTarget")
+								end
+							end
+						end,
+						get = function() return self.db.profile.ShowMinimap end,
+					},
+
+					SilentMode = {
+						type = "toggle",
+						name = L["silent_mode"],
+						desc = L["silent_mode_desc"],
+						width = "full",
+						order = 22,
+						set = function(_, val) self.db.profile.SilentMode = val end,
+						get = function() return self.db.profile.SilentMode end,
+					},
+
+					-- Help section
+					helpHeader = {
+						type = "header",
+						name = L["header_help"],
+						order = 30,
+					},
+					helpText = {
+						type = "description",
+						name = "\n" ..
+							COLORS.INFO .. L["help_slash"] .. "|r\n" ..
+							"  " .. L["help_slash_desc"] .. "\n\n" ..
+							COLORS.INFO .. L["help_minimap"] .. "|r\n" ..
+							"  " .. L["help_left_click"] .. "\n" ..
+							"  " .. L["help_right_click"] .. "\n\n" ..
+							COLORS.MUTED .. L["help_temp_info"] .. "|r\n",
+						fontSize = "medium",
+						order = 31,
+					},
+				},
+			},
 		},
-		statusDisplay = {
-			type = "description",
-			name = function()
-				return "\n" .. GetStatusText() .. "\n"
-			end,
-			fontSize = "medium",
-			order = 2,
-		},
-		
-		-- ================================================================
-		-- ZONE TARGETING MODES
-		-- ================================================================
-		modeHeader = {
-			type = "header",
-			name = "Targeting Behavior by Zone",
-			order = 10,
-		},
-		modeDescription = {
-			type = "description",
-			name = "Choose what your TAB key targets in different zones:\n\n" ..
-				   COLORS.DANGER .. "Players Only|r — Only cycles through enemy players (great for PvP)\n" ..
-				   COLORS.SUCCESS .. "All Enemies|r — Cycles through all enemies including NPCs and pets\n",
-			fontSize = "medium",
-			order = 11,
-		},
-		
-		PVPMode = {
-			type = "select",
-			name = COLORS.DANGER .. "PvP Zones|r (Arenas & Battlegrounds)",
-			desc = "What to target in competitive PvP content like arenas, battlegrounds, and war mode combat areas.",
-			values = function() return GetModeDropdownValues() end,
-			width = "full",
-			order = 12,
-			set = function(_, val)
-				Addon.Settings.PVPMode = val
-				Addon:ApplyBindings()
-			end,
-			get = function()
-				return Addon.Settings.PVPMode
-			end,
-		},
-		
-		PVEMode = {
-			type = "select",
-			name = COLORS.WARNING .. "PvE Instances|r (Dungeons & Raids)",
-			desc = "What to target in dungeons, raids, and scenarios.",
-			values = function() return GetModeDropdownValues() end,
-			width = "full",
-			order = 13,
-			set = function(_, val)
-				Addon.Settings.PVEMode = val
-				Addon:ApplyBindings()
-			end,
-			get = function()
-				return Addon.Settings.PVEMode
-			end,
-		},
-		
-		WorldMode = {
-			type = "select",
-			name = COLORS.SUCCESS .. "Open World|r (Questing & Exploration)",
-			desc = "What to target while out in the open world.",
-			values = function() return GetModeDropdownValues() end,
-			width = "full",
-			order = 14,
-			set = function(_, val)
-				Addon.Settings.WorldMode = val
-				Addon:ApplyBindings()
-			end,
-			get = function()
-				return Addon.Settings.WorldMode
-			end,
-		},
-		
-		-- ================================================================
-		-- ICON CUSTOMIZATION
-		-- ================================================================
-		iconHeader = {
-			type = "header",
-			name = "Icon Customization",
-			order = 20,
-		},
-		iconDescription = {
-			type = "description",
-			name = "Choose the icons displayed for each targeting mode. These icons appear on the minimap button, in dropdowns, and in status messages.\n",
-			fontSize = "medium",
-			order = 21,
-		},
-		
-		PlayersOnlyIcon = {
-			type = "select",
-			name = COLORS.DANGER .. "Players Only|r Icon",
-			desc = "Icon to display when targeting players only.",
-			values = function() return GetPlayersOnlyIconValues() end,
-			width = "full",
-			order = 22,
-			set = function(_, val)
-				Addon.Settings.PlayersOnlyIcon = val
-				UpdateMinimapIcon()
-				LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
-			end,
-			get = function()
-				return Addon.Settings.PlayersOnlyIcon
-			end,
-		},
-		
-		AllEnemiesIcon = {
-			type = "select",
-			name = COLORS.SUCCESS .. "All Enemies|r Icon",
-			desc = "Icon to display when targeting all enemies.",
-			values = function() return GetAllEnemiesIconValues() end,
-			width = "full",
-			order = 23,
-			set = function(_, val)
-				Addon.Settings.AllEnemiesIcon = val
-				UpdateMinimapIcon()
-				LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
-			end,
-			get = function()
-				return Addon.Settings.AllEnemiesIcon
-			end,
-		},
-		
-		-- ================================================================
-		-- KEYBIND SETTINGS
-		-- ================================================================
-		keybindHeader = {
-			type = "header",
-			name = "Keybinds",
-			order = 30,
-		},
-		keybindDescription = {
-			type = "description",
-			name = "Customize which keys cycle through enemies. Click a button and press your desired key combination.\n",
-			fontSize = "medium",
-			order = 31,
-		},
-		
-		TargetKey = {
-			type = "keybinding",
-			name = "Next Enemy",
-			desc = "Key to target the next enemy in front of you.",
-			width = "full",
-			order = 32,
-			set = function(_, val)
-				Addon.Settings.TargetKey = (val ~= "") and val or nil
-				Addon:ApplyBindings()
-			end,
-			get = function()
-				return Addon.Settings.TargetKey
-			end,
-		},
-		
-		PreviousTargetKey = {
-			type = "keybinding",
-			name = "Previous Enemy",
-			desc = "Key to target the previous enemy.",
-			width = "full",
-			order = 33,
-			set = function(_, val)
-				Addon.Settings.PreviousTargetKey = (val ~= "") and val or nil
-				Addon:ApplyBindings()
-			end,
-			get = function()
-				return Addon.Settings.PreviousTargetKey
-			end,
-		},
-		
-		UseDefaultKeys = {
-			type = "toggle",
-			name = "Use TAB / Shift-TAB as fallback",
-			desc = "If no custom keybinds are set above, automatically use TAB and Shift-TAB.",
-			width = "full",
-			order = 34,
-			set = function(_, val)
-				Addon.Settings.UseDefaultKeys = val
-				Addon:ApplyBindings()
-			end,
-			get = function()
-				return Addon.Settings.UseDefaultKeys
-			end,
-		},
-		
-		-- ================================================================
-		-- GENERAL OPTIONS
-		-- ================================================================
-		generalHeader = {
-			type = "header",
-			name = "Display Options",
-			order = 40,
-		},
-		
-		ShowMinimap = {
-			type = "toggle",
-			name = "Show Minimap Button",
-			desc = "Display a minimap button for quick mode toggling and status at a glance.",
-			width = "full",
-			order = 41,
-			set = function(_, val)
-				Addon.Settings.ShowMinimap = val
-				local iconLib = LibStub("LibDBIcon-1.0", true)
-				if iconLib then
-					if val then
-						iconLib:Show("PVPTabTarget")
-					else
-						iconLib:Hide("PVPTabTarget")
-					end
-				end
-			end,
-			get = function()
-				return Addon.Settings.ShowMinimap
-			end,
-		},
-		
-		SilentMode = {
-			type = "toggle",
-			name = "Quiet Mode (hide chat messages)",
-			desc = "Stop showing status updates in the chat window when zones change. Error messages will still appear.",
-			width = "full",
-			order = 42,
-			set = function(_, val)
-				Addon.Settings.SilentMode = val
-			end,
-			get = function()
-				return Addon.Settings.SilentMode
-			end,
-		},
-		
-		-- ================================================================
-		-- HELP SECTION
-		-- ================================================================
-		helpHeader = {
-			type = "header",
-			name = "Quick Help",
-			order = 50,
-		},
-		helpText = {
-			type = "description",
-			name = "\n" ..
-				   COLORS.INFO .. "Slash Commands:|r\n" ..
-				   "  /pvptab or /ptt — Open this settings panel\n\n" ..
-				   COLORS.INFO .. "Minimap Button:|r\n" ..
-				   "  Left-click — Temporarily toggle targeting mode\n" ..
-				   "  Right-click — Open settings\n\n" ..
-				   COLORS.MUTED .. "Temporary overrides reset when you change zones or reload your UI.|r\n",
-			fontSize = "medium",
-			order = 51,
-		},
-	},
-}
+	}
+
+	return options
+end
+
+-- ============================================================================
+-- OPTIONS REGISTRATION
+-- ============================================================================
+
+function PVPTabTarget:SetupOptions()
+	local options = self:GetOptionsTable()
+
+	-- Inject AceDBOptions profile management as a tab
+	local profileOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+	profileOptions.order = 40
+	profileOptions.name = L["tab_profiles"]
+	options.args.profiles = profileOptions
+
+	-- Register with AceConfig
+	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable("PVPTabTarget", options)
+
+	-- Add to Blizzard settings panel
+	self.optionsCategory = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(
+		"PVPTabTarget", "PVPTabTarget"
+	)
+end
 
 -- ============================================================================
 -- BINDING LOGIC
 -- ============================================================================
 
--- Determine the keybind to use, with fallback logic
 local function ResolveKeybind(customKey, primaryAction, secondaryAction, defaultKey)
-	-- Custom key takes priority
 	if customKey and customKey ~= "" then
 		return customKey
 	end
-	
-	-- Try to find existing binding for the action
+
 	local existingKey = GetBindingKey(primaryAction)
 	if not existingKey then
 		existingKey = GetBindingKey(secondaryAction)
 	end
-	
+
 	if existingKey then
 		return existingKey
 	end
-	
-	-- Use default if enabled
-	if Addon.Settings.UseDefaultKeys and defaultKey then
+
+	if PVPTabTarget.db.profile.UseDefaultKeys and defaultKey then
 		return defaultKey
 	end
-	
+
 	return nil
 end
 
-function Addon:ApplyBindings(isTemporaryToggle)
-	-- Validate binding set
+function PVPTabTarget:ApplyBindings(isTemporaryToggle)
 	local bindSet = GetCurrentBindingSet()
-	if bindSet ~= 1 and bindSet ~= 2 then
-		return
-	end
-	
-	-- Cannot modify bindings in combat
+	if bindSet ~= 1 and bindSet ~= 2 then return end
+
 	if InCombatLockdown() then
-		Addon.BindingFailed = true
+		self.BindingFailed = true
 		return
 	end
-	
-	-- Update zone and mode state
-	Addon.CurrentZoneType = GetZoneTypeString()
-	Addon.CurrentTargetMode = GetModeForZone(Addon.CurrentZoneType)
-	
+
+	-- Update state
+	self.CurrentZoneType = GetZoneTypeString()
+	self.CurrentTargetMode = GetModeForZone(self.CurrentZoneType)
+
+	local p = self.db.profile
+
 	-- Resolve keybinds
 	local targetKey = ResolveKeybind(
-		Addon.Settings.TargetKey,
-		"TARGETNEARESTENEMYPLAYER",
-		"TARGETNEARESTENEMY",
-		"TAB"
+		p.TargetKey, "TARGETNEARESTENEMYPLAYER", "TARGETNEARESTENEMY", "TAB"
 	)
-	
 	local previousKey = ResolveKeybind(
-		Addon.Settings.PreviousTargetKey,
-		"TARGETPREVIOUSENEMYPLAYER",
-		"TARGETPREVIOUSENEMY",
-		"SHIFT-TAB"
+		p.PreviousTargetKey, "TARGETPREVIOUSENEMYPLAYER", "TARGETPREVIOUSENEMY", "SHIFT-TAB"
 	)
-	
-	-- Determine binding actions based on mode
+
+	-- Determine actions
 	local targetAction, previousAction
-	if Addon.CurrentTargetMode == MODE_PLAYERS_ONLY then
+	if self.CurrentTargetMode == MODE_PLAYERS_ONLY then
 		targetAction = "TARGETNEARESTENEMYPLAYER"
 		previousAction = "TARGETPREVIOUSENEMYPLAYER"
 	else
 		targetAction = "TARGETNEARESTENEMY"
 		previousAction = "TARGETPREVIOUSENEMY"
 	end
-	
-	-- Check if binding already correct (optimization)
+
+	-- Skip if already correct
 	if targetKey then
 		local currentAction = GetBindingAction(targetKey)
 		if currentAction == targetAction then
@@ -710,159 +688,155 @@ function Addon:ApplyBindings(isTemporaryToggle)
 			return
 		end
 	end
-	
-	-- Apply new bindings
+
+	-- Apply bindings
 	local success = true
-	
+
 	if targetKey then
 		success = SetBinding(targetKey, targetAction)
 	end
-	
 	if previousKey and success then
 		SetBinding(previousKey, previousAction)
 	end
-	
-	-- Save and notify
+
 	if success then
 		SaveBindings(bindSet)
-		Addon.BindingFailed = false
+		self.BindingFailed = false
 		UpdateMinimapIcon()
-		
-		-- Refresh settings panel if open
+
 		LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
-		
-		-- Show status message
-		if not Addon.Settings.SilentMode then
-			local modeText = FormatMode(Addon.CurrentTargetMode)
-			local zoneText = FormatZone(Addon.CurrentZoneType)
-			
-			if Addon.TemporaryOverride then
-				PrintMessage(COLORS.WARNING .. "[Override]|r Now targeting: " .. modeText)
+
+		if not p.SilentMode then
+			local modeText = FormatMode(self.CurrentTargetMode)
+			local zoneText = FormatZone(self.CurrentZoneType)
+
+			if self.TemporaryOverride then
+				self:Print(COLORS.WARNING .. L["msg_override"] .. "|r " .. modeText)
 			else
-				PrintMessage(zoneText .. " → " .. modeText)
+				self:Print(zoneText .. " → " .. modeText)
 			end
 		end
 	else
-		Addon.BindingFailed = true
+		self.BindingFailed = true
 	end
 end
 
 -- ============================================================================
--- EVENT HANDLING
+-- MIGRATION — Import old PVPTabTargetSettings into AceDB
 -- ============================================================================
 
-function Addon:OnLoad(frame)
-	frame:RegisterEvent("ADDON_LOADED")
-	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-	frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-	frame:RegisterEvent("DUEL_REQUESTED")
-	frame:RegisterEvent("DUEL_FINISHED")
-	frame:RegisterEvent("CHAT_MSG_SYSTEM")
-end
+function PVPTabTarget:MigrateOldSettings()
+	if not PVPTabTargetSettings then return end
 
-function Addon:InitializeSettings()
-	-- Create saved variables table if needed
-	if not PVPTabTargetSettings then
-		PVPTabTargetSettings = {}
-	end
-	
-	Addon.Settings = PVPTabTargetSettings
-	
-	-- Migrate old settings key names
-	if Addon.Settings.DefaultKey ~= nil then
-		Addon.Settings.UseDefaultKeys = Addon.Settings.DefaultKey
-		Addon.Settings.DefaultKey = nil
-	end
-	
-	-- Apply defaults for any missing settings
-	for key, defaultValue in pairs(Addon.DefaultConfig) do
-		if Addon.Settings[key] == nil then
-			Addon.Settings[key] = defaultValue
+	local old = PVPTabTargetSettings
+	local p = self.db.profile
+
+	-- Map old keys to new profile keys
+	local migrations = {
+		"UseDefaultKeys", "SilentMode", "ShowMinimap",
+		"PVPMode", "PVEMode", "WorldMode",
+		"PlayersOnlyIcon", "AllEnemiesIcon",
+		"TargetKey", "PreviousTargetKey",
+	}
+
+	local migrated = false
+	for _, key in ipairs(migrations) do
+		if old[key] ~= nil then
+			p[key] = old[key]
+			migrated = true
 		end
 	end
+
+	-- Handle renamed key
+	if old.DefaultKey ~= nil then
+		p.UseDefaultKeys = old.DefaultKey
+		migrated = true
+	end
+
+	-- Migrate minimap position
+	if old.minimapPos then
+		p.minimap.minimapPos = old.minimapPos
+		migrated = true
+	end
+
+	-- Sync ShowMinimap with minimap.hide
+	p.minimap.hide = not p.ShowMinimap
+
+	if migrated then
+		-- Clear old saved variable so migration only happens once
+		PVPTabTargetSettings = nil
+		self:Print(COLORS.INFO .. "Settings migrated to the new profile system." .. "|r")
+	end
 end
 
-function Addon:SetupInterface()
-	-- Register with Ace Config
-	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable("PVPTabTarget", Addon.AceConfig)
-	Addon.OptionsCategory = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("PVPTabTarget", "PVPTabTarget")
-	
-	-- Setup minimap button
-	SetupMinimapButton()
-	
-	-- Register slash commands
-	SLASH_PVPTABTARGET1 = "/pvptab"
-	SLASH_PVPTABTARGET2 = "/ptt"
-	SlashCmdList["PVPTABTARGET"] = OpenSettings
-end
+-- ============================================================================
+-- PROFILE CHANGE CALLBACK
+-- ============================================================================
 
-function Addon:OnEvent(frame, event, arg1, ...)
-	-- ================================================================
-	-- ADDON INITIALIZATION
-	-- ================================================================
-	if event == "ADDON_LOADED" and arg1 == AddonName then
-		self:InitializeSettings()
-		self:SetupInterface()
-		frame:UnregisterEvent("ADDON_LOADED")
-		return
-	end
-	
-	-- ================================================================
-	-- INITIAL WORLD ENTRY
-	-- ================================================================
-	if event == "PLAYER_ENTERING_WORLD" then
-		-- Delay initial binding to ensure everything is loaded
-		C_Timer.After(1, function()
-			Addon:ApplyBindings()
-			Addon.IsInitialized = true
-		end)
-		return
-	end
-	
-	-- ================================================================
-	-- ZONE CHANGES
-	-- ================================================================
-	if event == "ZONE_CHANGED_NEW_AREA" then
-		-- Clear temporary override when changing zones
-		Addon.TemporaryOverride = false
-		Addon.TemporaryMode = nil
-		Addon:ApplyBindings()
-		return
-	end
-	
-	-- ================================================================
-	-- COMBAT END (Retry failed bindings)
-	-- ================================================================
-	if event == "PLAYER_REGEN_ENABLED" and Addon.BindingFailed then
-		Addon:ApplyBindings()
-		return
-	end
-	
-	-- ================================================================
-	-- DUEL HANDLING
-	-- ================================================================
-	if event == "DUEL_REQUESTED" then
-		-- Force PvP mode during duels
-		Addon.CurrentZoneType = ZONE_PVP
-		Addon:ApplyBindings()
-		return
-	end
-	
-	if event == "DUEL_FINISHED" then
-		Addon:ApplyBindings()
-		return
-	end
-	
-	-- ================================================================
-	-- SYSTEM MESSAGES (Duel request detection)
-	-- ================================================================
-	if event == "CHAT_MSG_SYSTEM" then
-		-- Check for duel request message
-		if not issecretvalue(arg1) and arg1 == ERR_DUEL_REQUESTED then
-			Addon.CurrentZoneType = ZONE_PVP
-			Addon:ApplyBindings()
+function PVPTabTarget:OnProfileChanged()
+	self:ApplyBindings()
+
+	local iconLib = LibStub("LibDBIcon-1.0", true)
+	if iconLib then
+		if self.db.profile.ShowMinimap then
+			iconLib:Show("PVPTabTarget")
+		else
+			iconLib:Hide("PVPTabTarget")
 		end
-		return
+	end
+
+	UpdateMinimapIcon()
+end
+
+-- ============================================================================
+-- ACE ADDON LIFECYCLE
+-- ============================================================================
+
+function PVPTabTarget:OnInitialize()
+	-- Create AceDB database
+	self.db = LibStub("AceDB-3.0"):New("PVPTabTargetDB", defaults, true)
+
+	-- Migrate from legacy saved variable
+	self:MigrateOldSettings()
+
+	-- Register AceDB profile callbacks
+	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+
+	-- Setup GUI and commands
+	self:SetupOptions()
+	self:SetupMinimapButton()
+
+	-- Register slash commands via AceConsole
+	self:RegisterChatCommand("pvptab", "OpenSettings")
+	self:RegisterChatCommand("ptt", "OpenSettings")
+end
+
+function PVPTabTarget:OnEnable()
+	-- Register events via AceEvent — handler methods match event names
+	self:RegisterEvent("PLAYER_ENTERING_WORLD")
+	self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+	self:RegisterEvent("PLAYER_REGEN_ENABLED")
+end
+
+-- ============================================================================
+-- EVENT HANDLERS (AceEvent auto-dispatches to methods matching event names)
+-- ============================================================================
+
+function PVPTabTarget:PLAYER_ENTERING_WORLD()
+	-- Delay initial binding to ensure everything is loaded
+	self:ScheduleTimer("ApplyBindings", 1)
+end
+
+function PVPTabTarget:ZONE_CHANGED_NEW_AREA()
+	self.TemporaryOverride = false
+	self.TemporaryMode = nil
+	self:ApplyBindings()
+end
+
+function PVPTabTarget:PLAYER_REGEN_ENABLED()
+	if self.BindingFailed then
+		self:ApplyBindings()
 	end
 end

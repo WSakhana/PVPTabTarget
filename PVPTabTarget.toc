@@ -1,9 +1,11 @@
 ## Interface: 120001, 120000
 ## Title: |cFF74D06CPVPTabTarget|r
 ## Notes: Smart TAB targeting! Automatically switches between targeting players-only (PvP) or all enemies (PvE) based on your current zone.
-## Version: 1.2.0
+## Version: 2.0.0
 ## Author: Anahkas
+## SavedVariables: PVPTabTargetDB
 ## SavedVariablesPerCharacter: PVPTabTargetSettings
+## OptionalDeps: Ace3
 ## IconTexture: Interface\AddOns\PVPTabTarget\PVPTabTargetLogo
 ## X-Curse-Project-ID: 1442795
 ## Category: PvP
