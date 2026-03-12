@@ -1,5 +1,5 @@
 -- ============================================================================
--- PVPTabTarget — Smart TAB Targeting for WoW
+-- PVPTabTarget - Smart TAB Targeting for WoW
 -- Refactored with AceAddon-3.0, AceDB-3.0, AceEvent-3.0, AceConsole-3.0,
 -- AceTimer-3.0, AceLocale-3.0 & AceDBOptions-3.0
 -- ============================================================================
@@ -307,8 +307,8 @@ function PVPTabTarget:SetupMinimapButton()
 				1, 1, 1, 0.7, 0.9, 1
 			)
 			tooltip:AddLine(" ")
-			tooltip:AddLine(COLORS.INFO .. L["minimap_left_click"] .. "|r — " .. L["minimap_toggle_mode"])
-			tooltip:AddLine(COLORS.INFO .. L["minimap_right_click"] .. "|r — " .. L["minimap_open_settings"])
+			tooltip:AddLine(COLORS.INFO .. L["minimap_left_click"] .. "|r - " .. L["minimap_toggle_mode"])
+			tooltip:AddLine(COLORS.INFO .. L["minimap_right_click"] .. "|r - " .. L["minimap_open_settings"])
 
 			if self.TemporaryOverride then
 				tooltip:AddLine(" ")
@@ -338,7 +338,7 @@ function PVPTabTarget:OpenSettings()
 end
 
 -- ============================================================================
--- ACE OPTIONS TABLE — Tabbed Layout
+-- ACE OPTIONS TABLE - Tabbed Layout
 -- ============================================================================
 
 function PVPTabTarget:GetOptionsTable()
@@ -375,8 +375,8 @@ function PVPTabTarget:GetOptionsTable()
 					modeDescription = {
 						type = "description",
 						name = L["targeting_desc"] .. "\n\n" ..
-							COLORS.DANGER .. L["mode_players_only"] .. "|r — " .. L["mode_players_desc"] .. "\n" ..
-							COLORS.SUCCESS .. L["mode_all_enemies"] .. "|r — " .. L["mode_all_desc"] .. "\n",
+							COLORS.DANGER .. L["mode_players_only"] .. "|r - " .. L["mode_players_desc"] .. "\n" ..
+							COLORS.SUCCESS .. L["mode_all_enemies"] .. "|r - " .. L["mode_all_desc"] .. "\n",
 						fontSize = "medium",
 						order = 1,
 					},
@@ -722,7 +722,7 @@ function PVPTabTarget:ApplyBindings(isTemporaryToggle)
 end
 
 -- ============================================================================
--- MIGRATION — Import old PVPTabTargetSettings into AceDB
+-- MIGRATION - Import old PVPTabTargetSettings into AceDB
 -- ============================================================================
 
 function PVPTabTarget:MigrateOldSettings()
@@ -814,7 +814,7 @@ function PVPTabTarget:OnInitialize()
 end
 
 function PVPTabTarget:OnEnable()
-	-- Register events via AceEvent — handler methods match event names
+	-- Register events via AceEvent - handler methods match event names
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")

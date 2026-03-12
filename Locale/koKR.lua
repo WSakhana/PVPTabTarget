@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "지역 변경 시 채팅 창의 상태 업데이트를 
 -- Settings: Help
 L["header_help"] = "빠른 도움말"
 L["help_slash"] = "슬래시 명령어:"
-L["help_slash_desc"] = "/pvptab 또는 /ptt — 설정 패널 열기"
+L["help_slash_desc"] = "/pvptab 또는 /ptt - 설정 패널 열기"
 L["help_minimap"] = "미니맵 버튼:"
-L["help_left_click"] = "좌클릭 — 대상 선택 모드 임시 전환"
-L["help_right_click"] = "우클릭 — 설정 열기"
+L["help_left_click"] = "좌클릭 - 대상 선택 모드 임시 전환"
+L["help_right_click"] = "우클릭 - 설정 열기"
 L["help_temp_info"] = "임시 변경은 지역 변경이나 UI 재로드 시 초기화됩니다."
 
 -- Tooltip

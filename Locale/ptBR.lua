@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "Para de mostrar atualizações de status no chat ao mud
 -- Settings: Help
 L["header_help"] = "Ajuda rápida"
 L["help_slash"] = "Comandos de barra:"
-L["help_slash_desc"] = "/pvptab ou /ptt — Abrir este painel de configurações"
+L["help_slash_desc"] = "/pvptab ou /ptt - Abrir este painel de configurações"
 L["help_minimap"] = "Botão do minimapa:"
-L["help_left_click"] = "Clique esquerdo — Alternar temporariamente o modo de seleção"
-L["help_right_click"] = "Clique direito — Abrir configurações"
+L["help_left_click"] = "Clique esquerdo - Alternar temporariamente o modo de seleção"
+L["help_right_click"] = "Clique direito - Abrir configurações"
 L["help_temp_info"] = "Substituições temporárias são redefinidas ao mudar de zona ou recarregar a interface."
 
 -- Tooltip

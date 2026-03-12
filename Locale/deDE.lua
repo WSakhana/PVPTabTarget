@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "Keine Statusmeldungen im Chat anzeigen, wenn sich die Z
 -- Settings: Help
 L["header_help"] = "Schnellhilfe"
 L["help_slash"] = "Slash-Befehle:"
-L["help_slash_desc"] = "/pvptab oder /ptt — Dieses Einstellungsfenster öffnen"
+L["help_slash_desc"] = "/pvptab oder /ptt - Dieses Einstellungsfenster öffnen"
 L["help_minimap"] = "Minikartenknopf:"
-L["help_left_click"] = "Linksklick — Zielmodus vorübergehend umschalten"
-L["help_right_click"] = "Rechtsklick — Einstellungen öffnen"
+L["help_left_click"] = "Linksklick - Zielmodus vorübergehend umschalten"
+L["help_right_click"] = "Rechtsklick - Einstellungen öffnen"
 L["help_temp_info"] = "Temporäre Überschreibungen werden beim Zonenwechsel oder Neuladen der Oberfläche zurückgesetzt."
 
 -- Tooltip

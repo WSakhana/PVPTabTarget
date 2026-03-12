@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "Stop showing status updates in the chat window when zon
 -- Settings: Help
 L["header_help"] = "Quick Help"
 L["help_slash"] = "Slash Commands:"
-L["help_slash_desc"] = "/pvptab or /ptt — Open this settings panel"
+L["help_slash_desc"] = "/pvptab or /ptt - Open this settings panel"
 L["help_minimap"] = "Minimap Button:"
-L["help_left_click"] = "Left-click — Temporarily toggle targeting mode"
-L["help_right_click"] = "Right-click — Open settings"
+L["help_left_click"] = "Left-click - Temporarily toggle targeting mode"
+L["help_right_click"] = "Right-click - Open settings"
 L["help_temp_info"] = "Temporary overrides reset when you change zones or reload your UI."
 
 -- Tooltip

@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "Arrête d'afficher les mises à jour d'état dans le ch
 -- Settings: Help
 L["header_help"] = "Aide rapide"
 L["help_slash"] = "Commandes slash :"
-L["help_slash_desc"] = "/pvptab ou /ptt — Ouvrir ce panneau de paramètres"
+L["help_slash_desc"] = "/pvptab ou /ptt - Ouvrir ce panneau de paramètres"
 L["help_minimap"] = "Bouton de minicarte :"
-L["help_left_click"] = "Clic gauche — Basculer temporairement le mode de ciblage"
-L["help_right_click"] = "Clic droit — Ouvrir les paramètres"
+L["help_left_click"] = "Clic gauche - Basculer temporairement le mode de ciblage"
+L["help_right_click"] = "Clic droit - Ouvrir les paramètres"
 L["help_temp_info"] = "Les remplacements temporaires se réinitialisent lorsque vous changez de zone ou rechargez votre interface."
 
 -- Tooltip

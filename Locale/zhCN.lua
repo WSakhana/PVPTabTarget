@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "切换区域时不再在聊天窗口显示状态更新�
 -- Settings: Help
 L["header_help"] = "快速帮助"
 L["help_slash"] = "斜杠命令："
-L["help_slash_desc"] = "/pvptab 或 /ptt — 打开此设置面板"
+L["help_slash_desc"] = "/pvptab 或 /ptt - 打开此设置面板"
 L["help_minimap"] = "小地图按钮："
-L["help_left_click"] = "左键点击 — 临时切换选取模式"
-L["help_right_click"] = "右键点击 — 打开设置"
+L["help_left_click"] = "左键点击 - 临时切换选取模式"
+L["help_right_click"] = "右键点击 - 打开设置"
 L["help_temp_info"] = "临时覆盖将在您切换区域或重新加载界面时重置。"
 
 -- Tooltip

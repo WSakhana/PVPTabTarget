@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "Deja de mostrar actualizaciones de estado en el chat cu
 -- Settings: Help
 L["header_help"] = "Ayuda rápida"
 L["help_slash"] = "Comandos de barra:"
-L["help_slash_desc"] = "/pvptab o /ptt — Abrir este panel de configuración"
+L["help_slash_desc"] = "/pvptab o /ptt - Abrir este panel de configuración"
 L["help_minimap"] = "Botón del minimapa:"
-L["help_left_click"] = "Clic izquierdo — Cambiar temporalmente el modo de selección"
-L["help_right_click"] = "Clic derecho — Abrir configuración"
+L["help_left_click"] = "Clic izquierdo - Cambiar temporalmente el modo de selección"
+L["help_right_click"] = "Clic derecho - Abrir configuración"
 L["help_temp_info"] = "Las anulaciones temporales se restablecen al cambiar de zona o recargar la interfaz."
 
 -- Tooltip

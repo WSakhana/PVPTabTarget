@@ -62,10 +62,10 @@ L["silent_mode_desc"] = "Non mostrare aggiornamenti di stato nella chat quando c
 -- Settings: Help
 L["header_help"] = "Guida rapida"
 L["help_slash"] = "Comandi slash:"
-L["help_slash_desc"] = "/pvptab o /ptt — Apri questo pannello impostazioni"
+L["help_slash_desc"] = "/pvptab o /ptt - Apri questo pannello impostazioni"
 L["help_minimap"] = "Pulsante minimappa:"
-L["help_left_click"] = "Clic sinistro — Cambia temporaneamente la modalità di selezione"
-L["help_right_click"] = "Clic destro — Apri impostazioni"
+L["help_left_click"] = "Clic sinistro - Cambia temporaneamente la modalità di selezione"
+L["help_right_click"] = "Clic destro - Apri impostazioni"
 L["help_temp_info"] = "Le sostituzioni temporanee vengono ripristinate al cambio zona o al ricaricamento dell'interfaccia."
 
 -- Tooltip

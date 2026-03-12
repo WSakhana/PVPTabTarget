@@ -2,12 +2,15 @@
 
 All notable changes to PVPTabTarget will be documented in this file.
 
-## [2.0.0] — Major Refactor
+## [2.0.1] - 
+- Update interface version and increment addon version to 2.0.1
+
+## [2.0.0] - Major Refactor
 
 ### Added
 - **Ace3 Framework Integration**: Full rewrite using AceAddon-3.0, AceEvent-3.0, AceConsole-3.0, AceTimer-3.0, AceDB-3.0, AceDBOptions-3.0, AceLocale-3.0
 - **Profile System**: Per-character or shared profiles with copy, reset, and delete support via AceDB/AceDBOptions
-- **Localization**: Full translations for 10 languages — English, French, German, Spanish, Portuguese (BR), Russian, Korean, Chinese Simplified, Chinese Traditional, Italian
+- **Localization**: Full translations for 10 languages - English, French, German, Spanish, Portuguese (BR), Russian, Korean, Chinese Simplified, Chinese Traditional, Italian
 - **Tabbed Settings UI**: Reorganized settings into Targeting, Keybinds, Appearance, and Profiles tabs
 - **Automatic Migration**: Existing settings from v1.x are automatically imported into the new profile system
 
@@ -20,7 +23,7 @@ All notable changes to PVPTabTarget will be documented in this file.
 - Settings panel now refreshes live status display
 
 ### Removed
-- XML-based event frame (`PVPTabTargetFrame`) — no longer needed with AceAddon lifecycle
+- XML-based event frame (`PVPTabTargetFrame`) - no longer needed with AceAddon lifecycle
 
 ## [1.2.0]
 
