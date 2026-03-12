@@ -2,7 +2,10 @@
 
 All notable changes to PVPTabTarget will be documented in this file.
 
-## [2.0.1] - 
+## [2.0.2] - New Logo
+- Update PVPTabTargetLogo.tga with new logo design
+
+## [2.0.1] - Minor Changes
 - Update interface version and increment addon version to 2.0.1
 
 ## [2.0.0] - Major Refactor
