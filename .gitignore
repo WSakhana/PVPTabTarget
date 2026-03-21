@@ -2,6 +2,8 @@
 *.bak
 *.tmp
 
+.vs/
+
 # Fichiers système
 .DS_Store
 Thumbs.db

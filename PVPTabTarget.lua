@@ -29,6 +29,7 @@ local GetBindingKey = GetBindingKey
 local GetBindingAction = GetBindingAction
 local SetBinding = SetBinding
 local SaveBindings = SaveBindings
+local ipairs = ipairs
 local pairs = pairs
 
 -- ============================================================================
@@ -43,6 +44,12 @@ local MODE_ALL_ENEMIES = "ALL"
 local ZONE_PVP = "PVP"
 local ZONE_PVE = "PVE"
 local ZONE_WORLD = "WORLD"
+
+-- Binding Commands
+local ACTION_TARGET_NEXT_ALL = "TARGETNEARESTENEMY"
+local ACTION_TARGET_NEXT_PLAYERS = "TARGETNEARESTENEMYPLAYER"
+local ACTION_TARGET_PREVIOUS_ALL = "TARGETPREVIOUSENEMY"
+local ACTION_TARGET_PREVIOUS_PLAYERS = "TARGETPREVIOUSENEMYPLAYER"
 
 -- UI Color Codes
 local COLORS = {
@@ -122,7 +129,6 @@ end
 local defaults = {
 	profile = {
 		-- Behavior
-		UseDefaultKeys = true,
 		SilentMode = false,
 		ShowMinimap = true,
 
@@ -136,8 +142,8 @@ local defaults = {
 		AllEnemiesIcon = "pve_1",
 
 		-- Custom keybinds
-		TargetKey = "TAB",
-		PreviousTargetKey = "SHIFT-TAB",
+		TargetKeyDisabled = false,
+		PreviousTargetKeyDisabled = false,
 
 		-- LibDBIcon minimap position (nested table expected by LibDBIcon)
 		minimap = {
@@ -236,6 +242,80 @@ local function GetModeForZone(zoneType)
 end
 
 -- ============================================================================
+-- BINDING HELPERS
+-- ============================================================================
+
+local function GetFirstBoundKey(action)
+	local key1, key2 = GetBindingKey(action)
+	return key1 or key2
+end
+
+local function CollectBoundKeys(primaryAction, secondaryAction)
+	local keys = {}
+	local seen = {}
+
+	local function AddActionKeys(action)
+		local key1, key2 = GetBindingKey(action)
+		if key1 and not seen[key1] then
+			seen[key1] = true
+			keys[#keys + 1] = key1
+		end
+		if key2 and not seen[key2] then
+			seen[key2] = true
+			keys[#keys + 1] = key2
+		end
+	end
+
+	AddActionKeys(primaryAction)
+	if secondaryAction then
+		AddActionKeys(secondaryAction)
+	end
+
+	return keys
+end
+
+local function ResolveKeybind(customKey, isDisabled, preferredAction, alternateAction)
+	if customKey and customKey ~= "" then
+		return customKey
+	end
+
+	if isDisabled then
+		return nil
+	end
+
+	local existingKey = GetFirstBoundKey(preferredAction)
+	if not existingKey and alternateAction then
+		existingKey = GetFirstBoundKey(alternateAction)
+	end
+
+	if existingKey then
+		return existingKey
+	end
+
+	return nil
+end
+
+local function GetResolvedTargetKey()
+	local p = PVPTabTarget.db.profile
+	return ResolveKeybind(
+		p.TargetKey,
+		p.TargetKeyDisabled,
+		ACTION_TARGET_NEXT_ALL,
+		ACTION_TARGET_NEXT_PLAYERS
+	)
+end
+
+local function GetResolvedPreviousTargetKey()
+	local p = PVPTabTarget.db.profile
+	return ResolveKeybind(
+		p.PreviousTargetKey,
+		p.PreviousTargetKeyDisabled,
+		ACTION_TARGET_PREVIOUS_ALL,
+		ACTION_TARGET_PREVIOUS_PLAYERS
+	)
+end
+
+-- ============================================================================
 -- MINIMAP BUTTON
 -- ============================================================================
 
@@ -297,13 +377,12 @@ function PVPTabTarget:SetupMinimapButton()
 			tooltip:AddLine(GetStatusText())
 			tooltip:AddLine(" ")
 
-			local p = self.db.profile
 			tooltip:AddDoubleLine(
-				L["tooltip_next_target"], p.TargetKey or "TAB",
+				L["tooltip_next_target"], GetResolvedTargetKey() or NOT_BOUND,
 				1, 1, 1, 0.7, 0.9, 1
 			)
 			tooltip:AddDoubleLine(
-				L["tooltip_prev_target"], p.PreviousTargetKey or "SHIFT-TAB",
+				L["tooltip_prev_target"], GetResolvedPreviousTargetKey() or NOT_BOUND,
 				1, 1, 1, 0.7, 0.9, 1
 			)
 			tooltip:AddLine(" ")
@@ -449,10 +528,16 @@ function PVPTabTarget:GetOptionsTable()
 						width = "full",
 						order = 10,
 						set = function(_, val)
-							self.db.profile.TargetKey = (val ~= "") and val or nil
+							if val ~= "" then
+								self.db.profile.TargetKey = val
+								self.db.profile.TargetKeyDisabled = false
+							else
+								self.db.profile.TargetKey = nil
+								self.db.profile.TargetKeyDisabled = true
+							end
 							self:ApplyBindings()
 						end,
-						get = function() return self.db.profile.TargetKey end,
+						get = function() return GetResolvedTargetKey() end,
 					},
 
 					PreviousTargetKey = {
@@ -462,26 +547,19 @@ function PVPTabTarget:GetOptionsTable()
 						width = "full",
 						order = 11,
 						set = function(_, val)
-							self.db.profile.PreviousTargetKey = (val ~= "") and val or nil
+							if val ~= "" then
+								self.db.profile.PreviousTargetKey = val
+								self.db.profile.PreviousTargetKeyDisabled = false
+							else
+								self.db.profile.PreviousTargetKey = nil
+								self.db.profile.PreviousTargetKeyDisabled = true
+							end
 							self:ApplyBindings()
 						end,
-						get = function() return self.db.profile.PreviousTargetKey end,
+						get = function() return GetResolvedPreviousTargetKey() end,
 					},
 
 					spacer1 = { type = "description", name = " ", order = 19 },
-
-					UseDefaultKeys = {
-						type = "toggle",
-						name = L["use_default_keys"],
-						desc = L["use_default_keys_desc"],
-						width = "full",
-						order = 20,
-						set = function(_, val)
-							self.db.profile.UseDefaultKeys = val
-							self:ApplyBindings()
-						end,
-						get = function() return self.db.profile.UseDefaultKeys end,
-					},
 				},
 			},
 
@@ -626,28 +704,22 @@ end
 -- BINDING LOGIC
 -- ============================================================================
 
-local function ResolveKeybind(customKey, primaryAction, secondaryAction, defaultKey)
-	if customKey and customKey ~= "" then
-		return customKey
+local function ClearStaleBindings(desiredKey, primaryAction, secondaryAction)
+	local keys = CollectBoundKeys(primaryAction, secondaryAction)
+	local changed = false
+	local success = true
+
+	for _, key in ipairs(keys) do
+		if key ~= desiredKey then
+			success = SetBinding(key) and success
+			changed = true
+		end
 	end
 
-	local existingKey = GetBindingKey(primaryAction)
-	if not existingKey then
-		existingKey = GetBindingKey(secondaryAction)
-	end
-
-	if existingKey then
-		return existingKey
-	end
-
-	if PVPTabTarget.db.profile.UseDefaultKeys and defaultKey then
-		return defaultKey
-	end
-
-	return nil
+	return success, changed
 end
 
-function PVPTabTarget:ApplyBindings(isTemporaryToggle)
+function PVPTabTarget:ApplyBindings(isTemporaryToggle, suppressMessage)
 	local bindSet = GetCurrentBindingSet()
 	if bindSet ~= 1 and bindSet ~= 2 then return end
 
@@ -663,50 +735,59 @@ function PVPTabTarget:ApplyBindings(isTemporaryToggle)
 	local p = self.db.profile
 
 	-- Resolve keybinds
-	local targetKey = ResolveKeybind(
-		p.TargetKey, "TARGETNEARESTENEMYPLAYER", "TARGETNEARESTENEMY", "TAB"
-	)
-	local previousKey = ResolveKeybind(
-		p.PreviousTargetKey, "TARGETPREVIOUSENEMYPLAYER", "TARGETPREVIOUSENEMY", "SHIFT-TAB"
-	)
+	local targetKey = GetResolvedTargetKey()
+	local previousKey = GetResolvedPreviousTargetKey()
 
 	-- Determine actions
 	local targetAction, previousAction
 	if self.CurrentTargetMode == MODE_PLAYERS_ONLY then
-		targetAction = "TARGETNEARESTENEMYPLAYER"
-		previousAction = "TARGETPREVIOUSENEMYPLAYER"
+		targetAction = ACTION_TARGET_NEXT_PLAYERS
+		previousAction = ACTION_TARGET_PREVIOUS_PLAYERS
 	else
-		targetAction = "TARGETNEARESTENEMY"
-		previousAction = "TARGETPREVIOUSENEMY"
+		targetAction = ACTION_TARGET_NEXT_ALL
+		previousAction = ACTION_TARGET_PREVIOUS_ALL
 	end
 
-	-- Skip if already correct
-	if targetKey then
-		local currentAction = GetBindingAction(targetKey)
-		if currentAction == targetAction then
-			UpdateMinimapIcon()
-			return
-		end
-	end
-
-	-- Apply bindings
+	-- Reconcile bindings
 	local success = true
+	local changed = false
 
-	if targetKey then
+	local targetClearSuccess, targetClearChanged = ClearStaleBindings(
+		targetKey,
+		ACTION_TARGET_NEXT_ALL,
+		ACTION_TARGET_NEXT_PLAYERS
+	)
+	success = targetClearSuccess and success
+	changed = targetClearChanged or changed
+
+	local previousClearSuccess, previousClearChanged = ClearStaleBindings(
+		previousKey,
+		ACTION_TARGET_PREVIOUS_ALL,
+		ACTION_TARGET_PREVIOUS_PLAYERS
+	)
+	success = previousClearSuccess and success
+	changed = previousClearChanged or changed
+
+	if success and targetKey and GetBindingAction(targetKey) ~= targetAction then
 		success = SetBinding(targetKey, targetAction)
+		changed = true
 	end
-	if previousKey and success then
-		SetBinding(previousKey, previousAction)
+	if success and previousKey and GetBindingAction(previousKey) ~= previousAction then
+		success = SetBinding(previousKey, previousAction)
+		changed = true
 	end
 
 	if success then
-		SaveBindings(bindSet)
+		if changed then
+			SaveBindings(bindSet)
+		end
+
 		self.BindingFailed = false
 		UpdateMinimapIcon()
 
 		LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
 
-		if not p.SilentMode then
+		if changed and not suppressMessage and not p.SilentMode then
 			local modeText = FormatMode(self.CurrentTargetMode)
 			local zoneText = FormatZone(self.CurrentZoneType)
 
@@ -718,6 +799,48 @@ function PVPTabTarget:ApplyBindings(isTemporaryToggle)
 		end
 	else
 		self.BindingFailed = true
+	end
+end
+
+function PVPTabTarget:NormalizeBindingSettings()
+	local p = self.db.profile
+	local legacyFallbackEnabled = p.UseDefaultKeys ~= false and p.DefaultKey ~= false
+
+	if p.TargetKey == "" then
+		p.TargetKey = nil
+	end
+	if p.PreviousTargetKey == "" then
+		p.PreviousTargetKey = nil
+	end
+
+	-- Older versions stored TAB and SHIFT-TAB as fallback values. Clear those
+	-- legacy defaults so the addon only tracks explicit or real game bindings.
+	if legacyFallbackEnabled and p.TargetKey == "TAB" then
+		p.TargetKey = nil
+	end
+	if legacyFallbackEnabled and p.PreviousTargetKey == "SHIFT-TAB" then
+		p.PreviousTargetKey = nil
+	end
+
+	if p.TargetKey then
+		p.TargetKeyDisabled = false
+	end
+	if p.PreviousTargetKey then
+		p.PreviousTargetKeyDisabled = false
+	end
+
+	p.UseDefaultKeys = nil
+	p.DefaultKey = nil
+end
+
+function PVPTabTarget:RefreshDisabledBindingFlags()
+	local p = self.db.profile
+
+	if p.TargetKeyDisabled and #CollectBoundKeys(ACTION_TARGET_NEXT_ALL, ACTION_TARGET_NEXT_PLAYERS) > 0 then
+		p.TargetKeyDisabled = false
+	end
+	if p.PreviousTargetKeyDisabled and #CollectBoundKeys(ACTION_TARGET_PREVIOUS_ALL, ACTION_TARGET_PREVIOUS_PLAYERS) > 0 then
+		p.PreviousTargetKeyDisabled = false
 	end
 end
 
@@ -774,6 +897,7 @@ end
 -- ============================================================================
 
 function PVPTabTarget:OnProfileChanged()
+	self:NormalizeBindingSettings()
 	self:ApplyBindings()
 
 	local iconLib = LibStub("LibDBIcon-1.0", true)
@@ -798,6 +922,7 @@ function PVPTabTarget:OnInitialize()
 
 	-- Migrate from legacy saved variable
 	self:MigrateOldSettings()
+	self:NormalizeBindingSettings()
 
 	-- Register AceDB profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
@@ -818,6 +943,7 @@ function PVPTabTarget:OnEnable()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
+	self:RegisterEvent("UPDATE_BINDINGS")
 end
 
 -- ============================================================================
@@ -839,4 +965,9 @@ function PVPTabTarget:PLAYER_REGEN_ENABLED()
 	if self.BindingFailed then
 		self:ApplyBindings()
 	end
+end
+
+function PVPTabTarget:UPDATE_BINDINGS()
+	self:RefreshDisabledBindingFlags()
+	self:ApplyBindings(false, true)
 end
