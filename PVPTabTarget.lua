@@ -157,6 +157,7 @@ local defaults = {
 -- ADDON STATE (non-persistent)
 -- ============================================================================
 PVPTabTarget.BindingFailed = false
+PVPTabTarget.PendingApply = false
 PVPTabTarget.CurrentZoneType = ZONE_WORLD
 PVPTabTarget.CurrentTargetMode = MODE_ALL_ENEMIES
 PVPTabTarget.TemporaryOverride = false
@@ -203,6 +204,9 @@ local function GetStatusText()
 		status = status .. " " .. COLORS.WARNING .. "[" .. L["temporary_override"] .. "]|r"
 	end
 	status = status .. "\n" .. L["targeting"] .. ": " .. modeText
+	if PVPTabTarget.PendingApply then
+		status = status .. "\n" .. COLORS.WARNING .. L["pending_combat"] .. "|r"
+	end
 
 	return status
 end
@@ -334,6 +338,16 @@ local function UpdateMinimapIcon()
 		if button and button.icon then
 			button.icon:SetTexture(dataObj.icon)
 		end
+		if button and button:IsMouseOver() then
+			local onLeave = button:GetScript("OnLeave")
+			local onEnter = button:GetScript("OnEnter")
+			if onLeave then
+				onLeave(button)
+			end
+			if onEnter then
+				onEnter(button)
+			end
+		end
 	end
 end
 
@@ -404,16 +418,29 @@ end
 -- ============================================================================
 
 function PVPTabTarget:OpenSettings()
-	if InCombatLockdown() then
-		self:Print(COLORS.DANGER .. L["msg_combat_error"] .. "|r")
-		return
-	end
-
 	if self.optionsCategory and self.optionsCategory.name then
 		Settings.OpenToCategory(self.optionsCategory.name)
 	else
 		self:Print(COLORS.DANGER .. L["msg_settings_unavailable"] .. "|r")
 	end
+end
+
+function PVPTabTarget:HandleKeybindChange(profileKey, disabledKey, otherResolvedKey, otherLabel, value)
+	if value ~= "" and value == otherResolvedKey then
+		self:Print(COLORS.WARNING .. L["msg_key_conflict"]:format(value, otherLabel) .. "|r")
+		LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
+		return
+	end
+
+	if value ~= "" then
+		self.db.profile[profileKey] = value
+		self.db.profile[disabledKey] = false
+	else
+		self.db.profile[profileKey] = nil
+		self.db.profile[disabledKey] = true
+	end
+
+	self:ApplyBindings()
 end
 
 -- ============================================================================
@@ -528,14 +555,13 @@ function PVPTabTarget:GetOptionsTable()
 						width = "full",
 						order = 10,
 						set = function(_, val)
-							if val ~= "" then
-								self.db.profile.TargetKey = val
-								self.db.profile.TargetKeyDisabled = false
-							else
-								self.db.profile.TargetKey = nil
-								self.db.profile.TargetKeyDisabled = true
-							end
-							self:ApplyBindings()
+							self:HandleKeybindChange(
+								"TargetKey",
+								"TargetKeyDisabled",
+								GetResolvedPreviousTargetKey(),
+								L["prev_enemy"],
+								val
+							)
 						end,
 						get = function() return GetResolvedTargetKey() end,
 					},
@@ -547,14 +573,13 @@ function PVPTabTarget:GetOptionsTable()
 						width = "full",
 						order = 11,
 						set = function(_, val)
-							if val ~= "" then
-								self.db.profile.PreviousTargetKey = val
-								self.db.profile.PreviousTargetKeyDisabled = false
-							else
-								self.db.profile.PreviousTargetKey = nil
-								self.db.profile.PreviousTargetKeyDisabled = true
-							end
-							self:ApplyBindings()
+							self:HandleKeybindChange(
+								"PreviousTargetKey",
+								"PreviousTargetKeyDisabled",
+								GetResolvedTargetKey(),
+								L["next_enemy"],
+								val
+							)
 						end,
 						get = function() return GetResolvedPreviousTargetKey() end,
 					},
@@ -723,14 +748,21 @@ function PVPTabTarget:ApplyBindings(isTemporaryToggle, suppressMessage)
 	local bindSet = GetCurrentBindingSet()
 	if bindSet ~= 1 and bindSet ~= 2 then return end
 
-	if InCombatLockdown() then
-		self.BindingFailed = true
-		return
-	end
-
-	-- Update state
+	-- Update state even in combat so the tooltip and icon reflect queued changes.
 	self.CurrentZoneType = GetZoneTypeString()
 	self.CurrentTargetMode = GetModeForZone(self.CurrentZoneType)
+
+	if InCombatLockdown() then
+		local wasPending = self.PendingApply
+		self.BindingFailed = true
+		self.PendingApply = true
+		UpdateMinimapIcon()
+		LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
+		if not wasPending and not suppressMessage and not self.db.profile.SilentMode then
+			self:Print(COLORS.WARNING .. L["msg_pending_combat"] .. "|r")
+		end
+		return
+	end
 
 	local p = self.db.profile
 
@@ -783,6 +815,7 @@ function PVPTabTarget:ApplyBindings(isTemporaryToggle, suppressMessage)
 		end
 
 		self.BindingFailed = false
+		self.PendingApply = false
 		UpdateMinimapIcon()
 
 		LibStub("AceConfigRegistry-3.0"):NotifyChange("PVPTabTarget")
@@ -799,6 +832,7 @@ function PVPTabTarget:ApplyBindings(isTemporaryToggle, suppressMessage)
 		end
 	else
 		self.BindingFailed = true
+		self.PendingApply = false
 	end
 end
 

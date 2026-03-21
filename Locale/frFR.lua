@@ -15,6 +15,7 @@ L["current_zone"] = "Zone actuelle"
 L["targeting"] = "Ciblage"
 L["temporary_override"] = "Remplacement temporaire"
 L["override_resets"] = "Le remplacement se réinitialise au changement de zone"
+L["pending_combat"] = "Modifications en attente jusqu'à la fin du combat"
 
 -- Tab names
 L["tab_targeting"] = "Ciblage"
@@ -76,6 +77,8 @@ L["tooltip_prev_target"] = "Cible précédente :"
 L["msg_override"] = "[Remplacement] Ciblage actuel :"
 L["msg_combat_error"] = "Impossible d'ouvrir les paramètres pendant le combat !"
 L["msg_settings_unavailable"] = "Panneau de paramètres non disponible."
+L["msg_pending_combat"] = "Modifications mises en attente et appliquées à la fin du combat."
+L["msg_key_conflict"] = "Conflit de raccourci : %s est déjà assigné à %s."
 
 -- Minimap tooltip
 L["minimap_left_click"] = "Clic gauche"

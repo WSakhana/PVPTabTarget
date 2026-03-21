@@ -4,6 +4,7 @@ All notable changes to PVPTabTarget will be documented in this file.
 
 ## [2.0.3]
 - Enhance keybinding functionality and settings normalization for PVPTabTarget
+- Add pending combat messages and handle keybind conflicts in PVPTabTarget
 
 ## [2.0.2] - New Logo
 - Update PVPTabTargetLogo.tga with new logo design

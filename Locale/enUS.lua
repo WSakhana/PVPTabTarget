@@ -15,6 +15,7 @@ L["current_zone"] = "Current Zone"
 L["targeting"] = "Targeting"
 L["temporary_override"] = "Temporary Override"
 L["override_resets"] = "Override resets on zone change"
+L["pending_combat"] = "Changes pending until combat ends"
 
 -- Tab names
 L["tab_targeting"] = "Targeting"
@@ -76,6 +77,8 @@ L["tooltip_prev_target"] = "Previous Target:"
 L["msg_override"] = "[Override] Now targeting:"
 L["msg_combat_error"] = "Cannot open settings during combat!"
 L["msg_settings_unavailable"] = "Settings panel not available."
+L["msg_pending_combat"] = "Changes queued and will apply when combat ends."
+L["msg_key_conflict"] = "Key conflict: %s is already assigned to %s."
 
 -- Minimap tooltip
 L["minimap_left_click"] = "Left-Click"
