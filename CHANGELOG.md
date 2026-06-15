@@ -2,6 +2,9 @@
 
 All notable changes to PVPTabTarget will be documented in this file.
 
+## [2.0.5] 
+- Update addon for 12.0.7
+
 ## [2.0.4] - 2026-04-20
 
 - Update addon for 12.0.5
