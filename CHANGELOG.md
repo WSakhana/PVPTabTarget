@@ -2,6 +2,10 @@
 
 All notable changes to PVPTabTarget will be documented in this file.
 
+## 2.0.6 - WoW 12.1 Compatibility
+- Confirmed compatibility with WoW patch 12.1.
+- Added Interface 120100 support.
+
 ## [2.0.5] 
 - Update addon for 12.0.7
 
