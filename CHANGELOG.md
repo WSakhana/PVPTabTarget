@@ -2,6 +2,10 @@
 
 All notable changes to PVPTabTarget will be documented in this file.
 
+## 2.0.8 - Retail and Classic Downloads
+
+- The CurseForge release is now listed for every supported game version, including WoW 12.0.7, 12.1, and the Classic flavors.
+
 ## 2.0.7 - Official Classic Support
 
 - Added support for Mists of Pandaria Classic and Titan Reforged.

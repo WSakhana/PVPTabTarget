@@ -1,7 +1,7 @@
 ## Interface: 120100, 120007, 120005, 120001, 50504, 38001, 20505, 11508
 ## Title: |cFF74D06CPVPTabTarget|r
 ## Notes: Smart TAB targeting! Automatically switches between targeting players-only (PvP) or all enemies (PvE) based on your current zone.
-## Version: 2.0.7
+## Version: 2.0.8
 ## Author: Anahkas
 ## SavedVariables: PVPTabTargetDB
 ## SavedVariablesPerCharacter: PVPTabTargetSettings
