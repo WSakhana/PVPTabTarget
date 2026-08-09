@@ -2,6 +2,11 @@
 
 All notable changes to PVPTabTarget will be documented in this file.
 
+## 2.0.7 - Official Classic Support
+
+- Added support for Mists of Pandaria Classic and Titan Reforged.
+- Added support for Burning Crusade Classic Anniversary, Classic Era, Hardcore, and Season of Discovery.
+
 ## 2.0.6 - WoW 12.1 Compatibility
 - Confirmed compatibility with WoW patch 12.1.
 - Added Interface 120100 support.
