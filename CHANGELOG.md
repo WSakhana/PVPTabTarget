@@ -1,6 +1,10 @@
+## 2.0.9-beta.1 - Experimental WoW Forever Support
+- Added experimental WoW Forever support.
+
 # Changelog
 
 All notable changes to PVPTabTarget will be documented in this file.
+- Experimental beta; in-game validation is pending.
 
 ## 2.0.8 - Retail and Classic Downloads
 

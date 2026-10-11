@@ -219,7 +219,8 @@ local function GetZoneTypeString()
 	local pvpType = GetZonePVPInfo()
 	local _, instanceType = IsInInstance()
 
-	if instanceType == "arena" or instanceType == "pvp" or pvpType == "combat" then
+	if (not ns.ClientCompat.IsForever and instanceType == "arena")
+        or instanceType == "pvp" or pvpType == "combat" then
 		return ZONE_PVP
 	end
 

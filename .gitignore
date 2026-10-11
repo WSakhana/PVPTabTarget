@@ -7,3 +7,7 @@
 # Fichiers système
 .DS_Store
 Thumbs.db
+
+# Local package output
+.release/
+__pycache__/
