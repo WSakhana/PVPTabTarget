@@ -1,6 +1,6 @@
-# PVPTabTarget: experimental WoW Forever support
+# PVPTabTarget: WoW Forever support
 
-Version: `2.0.9-beta.1`. One source branch and version serve both editions.
+Version: `2.1.0`. One source branch and version serve both editions.
 
 ## Behavior
 
@@ -32,8 +32,8 @@ automatic Retail-to-Forever SavedVariables transfer.
 
 Run `py Tools/package.py --output .release` locally to create **QA drafts**:
 
-- `PVPTabTarget-2.0.9-beta.1-Retail.zip`
-- `PVPTabTarget-2.0.9-beta.1-Forever.zip`
+- `PVPTabTarget-2.1.0-Retail.zip`
+- `PVPTabTarget-2.1.0-Forever.zip`
 
 Each archive contains the unchanged addon folder name and edition-specific TOC
 metadata. Install a draft only in the intended client's `Interface/AddOns` directory.
@@ -43,15 +43,17 @@ For a fully validated stable package, use `--release --tag <matching-version-tag
 tagged checkout after recording PASS for static checks, Forever runtime, Retail
 runtime and dependencies, plus the actual Forever build and tester. The builder
 does not create tags, install addons or upload files. The existing CurseForge
-project can host both edition files. Initial public Forever versions are experimental betas. Their in-game checks remain pending.
+project can host both edition files. The current public Forever build is a Release. Its in-game checks remain as recorded above.
 
 ## Sources
 
 - [Forever client constants](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_ProjectConstants/Camelot/ProjectConstants.lua)
 - [Forever UI source](https://github.com/Gethe/wow-ui-source/tree/forever)
 
-## Experimental beta distribution
+## Public release distribution
 
-A public beta uses one archive with the existing client interfaces and Forever
-interface 16001. Beta publication does not change the pending in-game validation
-above. Stable releases remain blocked until those checks pass.
+Version `2.1.0` is available as a CurseForge Release for WoW Forever `1.60.1`
+(interface `16001`) and the other declared client versions. Release status does not
+change the in-game and dependency validation records above.
+
+[Download the verified release](https://edge.forgecdn.net/files/9322/947/PVPTabTarget-2.1.0-Release.zip)

@@ -1,4 +1,4 @@
-Experimental WoW Forever support is available in this development branch. See [FOREVER.md](FOREVER.md) for the supported behavior, draft packages and pending in-game checks.
+WoW Forever 1.60.1 support is available in Release 2.1.0. See [FOREVER.md](FOREVER.md) for supported behavior, downloads and validation records.
 
 # PVPTabTarget
 
